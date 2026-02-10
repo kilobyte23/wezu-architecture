@@ -1,0 +1,1773 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WEZU Platform - AWS EKS Architecture</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(-45deg, #050A14, #0A1428, #102438, #050A14);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            color: #ffffff;
+            overflow-x: hidden;
+            position: relative;
+            min-height: 100vh;
+        }
+
+        @keyframes gradientBG {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Animated Background */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.15;
+            pointer-events: none;
+        }
+
+        /* Cleaner, Slower Particles */
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.8) 0%, transparent 80%);
+            animation: float 25s infinite linear;
+            mix-blend-mode: screen;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(0) translateX(0);
+                opacity: 0;
+            }
+
+            20% {
+                opacity: 0.6;
+            }
+
+            80% {
+                opacity: 0.6;
+            }
+
+            100% {
+                transform: translateY(-100vh) translateX(50px);
+                opacity: 0;
+            }
+        }
+
+        /* Header */
+        .header {
+            background: rgba(10, 15, 30, 0.95);
+            backdrop-filter: blur(20px);
+            padding: 30px 50px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            position: relative;
+            top: 0;
+            z-index: 1000;
+            border-bottom: 3px solid rgba(255, 215, 0, 0.3);
+        }
+
+        .header h1 {
+            font-size: 36px;
+            background: linear-gradient(45deg, #FFD700, #FFA500, #FFD700);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            background-size: 200% 200%;
+            animation: gradientShift 3s ease infinite;
+            margin-bottom: 10px;
+            text-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+        }
+
+        .header p {
+            color: #95a5a6;
+            font-size: 16px;
+            letter-spacing: 1px;
+        }
+
+        @keyframes gradientShift {
+
+            0%,
+            100% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+        }
+
+        .architecture-container {
+            padding: 50px;
+            max-width: 1600px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Layer Styles */
+        .layer {
+            margin-bottom: 40px;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0;
+            transform: translateY(50px);
+        }
+
+        .layer.visible {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            filter: blur(0);
+        }
+
+        .layer {
+            margin-bottom: 40px;
+            cursor: pointer;
+            transition: all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+            opacity: 0;
+            transform: translateY(60px) scale(0.96);
+            filter: blur(5px);
+            perspective: 1000px;
+        }
+
+        .layer:hover {
+            transform: translateY(-8px) scale(1.01);
+        }
+
+        .layer-card {
+            border-radius: 20px;
+            padding: 35px;
+            padding-right: 240px;
+            box-shadow: 0 15px 45px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(20px);
+            background: rgba(25, 30, 45, 0.4);
+            transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        .layer-card:hover {
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.2), 0 0 30px rgba(79, 195, 247, 0.15);
+            transform: translateY(-5px);
+            border-color: rgba(255, 255, 255, 0.25);
+        }
+
+        .layer-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        .layer-card:hover::before {
+            opacity: 1;
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% {
+                transform: translate(-50%, -50%) rotate(0deg);
+            }
+
+            100% {
+                transform: translate(-50%, -50%) rotate(360deg);
+            }
+        }
+
+        .layer-title {
+            font-size: 26px;
+            font-weight: 800;
+            background: linear-gradient(135deg, white 0%, #E0E0E0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 15px;
+            text-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            letter-spacing: 0.5px;
+        }
+
+        .layer-subtitle {
+            font-size: 15px;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 8px;
+            line-height: 1.6;
+        }
+
+        .layer-security {
+            font-size: 13px;
+            color: #FFE082;
+            font-weight: 600;
+            margin-top: 12px;
+            padding: 8px 12px;
+            background: rgba(255, 224, 130, 0.1);
+            border-radius: 8px;
+            border-left: 3px solid #FFD700;
+        }
+
+        /* Layer Colors */
+        .layer-iot {
+            background: linear-gradient(135deg, #4A90E2 0%, #357ABD 100%);
+        }
+
+        .layer-route53 {
+            background: linear-gradient(135deg, #FF9900 0%, #E88B00 100%);
+        }
+
+        .layer-networking {
+            background: linear-gradient(135deg, #FF9900 0%, #E88B00 100%);
+        }
+
+        .layer-eks1 {
+            background: linear-gradient(135deg, #527FFF 0%, #3D5FCC 100%);
+        }
+
+        .layer-eks2 {
+            background: linear-gradient(135deg, #527FFF 0%, #3D5FCC 100%);
+        }
+
+        .layer-eks3 {
+            background: linear-gradient(135deg, #E91E63 0%, #C2185B 100%);
+        }
+
+        .layer-data {
+            background: linear-gradient(135deg, #2ECC71 0%, #27AE60 100%);
+        }
+
+        .layer-monitoring {
+            background: linear-gradient(135deg, #E67E22 0%, #D35400 100%);
+        }
+
+        .layer-clients {
+            background: linear-gradient(135deg, #9B59B6 0%, #8E44AD 100%);
+        }
+
+        /* EKS Components Grid */
+        .components-box {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 25px;
+            margin-top: 20px;
+        }
+
+        .components-title {
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .component-item {
+            color: rgba(255, 255, 255, 0.95);
+            font-size: 13px;
+            margin-bottom: 8px;
+            padding-left: 10px;
+        }
+
+        /* AI Agents Grid */
+        .ai-agents-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .ai-agent-card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .ai-agent-card:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+        }
+
+        .ai-agent-title {
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+
+        .ai-agent-detail {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 11px;
+            margin-bottom: 6px;
+        }
+
+        /* Client Apps Grid */
+        .client-apps-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .client-app-card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            padding: 18px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .client-app-card:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-5px);
+        }
+
+        .client-app-title {
+            color: white;
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .client-app-detail {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 11px;
+            margin-bottom: 4px;
+        }
+
+        /* Price Badge */
+        .price-badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.98);
+            border: 3px solid #FFD700;
+            border-radius: 12px;
+            padding: 15px 25px;
+            box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+                box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4);
+            }
+
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 12px 35px rgba(255, 215, 0, 0.6);
+            }
+        }
+
+        .price-label {
+            font-size: 11px;
+            font-weight: bold;
+            color: #E67E22;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .price-amount {
+            font-size: 20px;
+            font-weight: bold;
+            color: #27AE60;
+            text-align: center;
+        }
+
+        .price-breakdown {
+            margin-top: 10px;
+            font-size: 9px;
+            color: #555;
+            line-height: 1.8;
+        }
+
+        /* Arrow */
+        .arrow-container {
+            display: flex;
+            justify-content: center;
+            margin: 35px 0;
+            position: relative;
+        }
+
+        .arrow {
+            width: 4px;
+            height: 40px;
+            background: linear-gradient(to bottom, transparent, #95a5a6);
+            position: relative;
+            animation: arrowPulse 2s ease-in-out infinite;
+        }
+
+        .arrow::after {
+            content: '';
+            position: absolute;
+            bottom: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 12px solid transparent;
+            border-right: 12px solid transparent;
+            border-top: 16px solid #95a5a6;
+        }
+
+        @keyframes arrowPulse {
+
+            0%,
+            100% {
+                opacity: 0.6;
+            }
+
+            50% {
+                opacity: 1;
+            }
+        }
+
+        /* Cost Summary Section */
+        .cost-summary {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            padding: 40px;
+            margin: 50px 0;
+            border: 3px solid rgba(255, 215, 0, 0.3);
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        .cost-summary-title {
+            font-size: 32px;
+            font-weight: bold;
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        .cost-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .cost-table {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .cost-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 16px 25px;
+            border-bottom: 1px solid #e0e0e0;
+            transition: background 0.3s ease;
+        }
+
+        .cost-row:hover {
+            background: #f8f9fa;
+        }
+
+        .cost-row:nth-child(even) {
+            background: #f5f5f5;
+        }
+
+        .cost-row:nth-child(even):hover {
+            background: #eeeeee;
+        }
+
+        .cost-row-label {
+            color: #2c3e50;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .cost-row-value {
+            color: #2c3e50;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .cost-total {
+            background: linear-gradient(135deg, #27AE60, #2ECC71) !important;
+            border: none !important;
+        }
+
+        .cost-total .cost-row-label,
+        .cost-total .cost-row-value {
+            color: white;
+            font-size: 16px;
+        }
+
+        .per-vehicle-box {
+            background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
+            border: 3px solid #27AE60;
+            border-radius: 16px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 8px 30px rgba(39, 174, 96, 0.3);
+        }
+
+        .per-vehicle-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #27AE60;
+            margin-bottom: 20px;
+        }
+
+        .per-vehicle-vehicles {
+            font-size: 16px;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+
+        .per-vehicle-calc {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            color: #555;
+            font-size: 14px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .per-vehicle-result {
+            background: linear-gradient(135deg, #27AE60, #2ECC71);
+            border-radius: 12px;
+            padding: 25px;
+            color: white;
+            box-shadow: 0 8px 25px rgba(39, 174, 96, 0.4);
+        }
+
+        .per-vehicle-result-label {
+            font-size: 16px;
+            margin-bottom: 12px;
+        }
+
+        .per-vehicle-result-amount {
+            font-size: 42px;
+            font-weight: bold;
+        }
+
+        /* Architecture Highlights */
+        .highlights-section {
+            background: linear-gradient(135deg, rgba(255, 249, 230, 0.15) 0%, rgba(255, 249, 230, 0.05) 100%);
+            border: 3px solid #F39C12;
+            border-radius: 20px;
+            padding: 40px;
+            margin: 50px 0;
+            backdrop-filter: blur(10px);
+        }
+
+        .highlights-title {
+            font-size: 32px;
+            font-weight: bold;
+            background: linear-gradient(45deg, #FFD700, #F39C12);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        .highlights-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 25px;
+        }
+
+        .highlight-card {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .highlight-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .highlight-card-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            text-align: center;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #ecf0f1;
+        }
+
+        .highlight-card ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .highlight-card li {
+            color: #34495e;
+            font-size: 13px;
+            margin-bottom: 12px;
+            padding-left: 5px;
+            line-height: 1.6;
+        }
+
+        /* Footer */
+        .footer-note {
+            text-align: center;
+            margin: 50px 0 30px;
+            padding: 30px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .footer-note p {
+            margin: 8px 0;
+            font-size: 14px;
+        }
+
+        .footer-note .bold {
+            font-weight: bold;
+            color: #FFD700;
+            font-size: 16px;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 3000;
+            justify-content: center;
+            align-items: center;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+        }
+
+        .modal.active {
+            display: flex;
+            animation: modalFadeIn 0.3s ease;
+        }
+
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            border-radius: 20px;
+            padding: 45px;
+            max-width: 1000px;
+            max-height: 85vh;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.7);
+            border: 3px solid rgba(255, 215, 0, 0.3);
+            animation: modalSlideUp 0.4s ease;
+        }
+
+        @keyframes modalSlideUp {
+            from {
+                transform: translateY(50px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 107, 107, 0.3);
+            border: 2px solid #ff6b6b;
+            color: #ff6b6b;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 26px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .modal-close:hover {
+            background: #ff6b6b;
+            color: white;
+            transform: rotate(90deg);
+        }
+
+        .modal-content h2 {
+            color: #FFD700;
+            margin-bottom: 25px;
+            font-size: 32px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-content h3 {
+            color: #4FC3F7;
+            margin-top: 30px;
+            margin-bottom: 18px;
+            font-size: 22px;
+        }
+
+        .modal-content p,
+        .modal-content li {
+            color: #ecf0f1;
+            line-height: 1.8;
+            margin-bottom: 12px;
+            font-size: 15px;
+        }
+
+        .modal-content ul {
+            margin-left: 25px;
+        }
+
+        .badge {
+            display: inline-block;
+            background: rgba(79, 195, 247, 0.2);
+            border: 1px solid #4FC3F7;
+            padding: 8px 16px;
+            border-radius: 14px;
+            font-size: 13px;
+            margin: 5px;
+            color: #4FC3F7;
+        }
+
+        .cost-badge-modal {
+            background: linear-gradient(45deg, #27AE60, #2ECC71);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-weight: bold;
+            display: inline-block;
+            margin: 15px 0;
+            font-size: 20px;
+            box-shadow: 0 4px 15px rgba(39, 174, 96, 0.4);
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 18px;
+            margin-top: 18px;
+        }
+
+        .metric-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 18px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .metric-item:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: scale(1.03);
+        }
+
+        .metric-label {
+            color: #4FC3F7;
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+
+        .metric-value {
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 12px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1a1a2e;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(to bottom, #3498db, #2980b9);
+            border-radius: 6px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(to bottom, #2980b9, #1f6391);
+        }
+
+        .modal-content::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        .modal-content::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-content::-webkit-scrollbar-thumb {
+            background: rgba(255, 215, 0, 0.5);
+            border-radius: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Animated Background -->
+    <div class="bg-animation" id="bgAnimation"></div>
+
+    <div class="header">
+        <h1>⚡ WEZU Platform - AWS EKS Architecture</h1>
+        <p>Multi-Cluster Architecture for Battery Swapping Platform</p>
+    </div>
+
+    <div class="architecture-container">
+        <!-- Layer 1: IoT & Edge -->
+        <div class="layer" data-layer="1" onclick="showDetails('iot')">
+            <div class="layer-card layer-iot">
+                <div class="layer-title">1️⃣ IoT & Edge Layer</div>
+                <div class="layer-subtitle">
+                    Battery Swapping Station • Chargers • BMS • Sensors • Edge Controller (Local Control)
+                </div>
+                <div class="layer-subtitle">
+                    📡 Local Control • Real-time Data Collection • Device Monitoring
+                </div>
+                <div class="layer-security">
+                    🔐 MQTT over TLS 1.2/1.3 (Port 8883) • mTLS (X.509 Certificates)
+                </div>
+            </div>
+        </div>
+
+        <div class="arrow-container">
+            <div class="arrow"></div>
+        </div>
+
+        <!-- Layer 2: AWS Route 53 -->
+        <div class="layer" data-layer="2" onclick="showDetails('route53')">
+            <div class="layer-card layer-route53">
+                <div class="layer-title">2️⃣ AWS Route 53</div>
+                <div class="layer-subtitle">
+                    DNS Resolution • DNSSEC • Health Checks
+                </div>
+                <div class="price-badge">
+                    <div class="price-label">💰 Monthly Cost</div>
+                    <div class="price-amount">₹250</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="arrow-container">
+            <div class="arrow"></div>
+        </div>
+
+        <!-- Layer 3: Networking Layer -->
+        <div class="layer" data-layer="3" onclick="showDetails('networking')">
+            <div class="layer-card layer-networking">
+                <div class="layer-title">3️⃣ Networking Layer (NLB + VPC + NAT Gateway)</div>
+                <div class="layer-subtitle">
+                    TCP Passthrough • Preserves Client TLS • High Availability
+                </div>
+                <div class="price-badge">
+                    <div class="price-label">💰 Monthly Cost</div>
+                    <div class="price-breakdown">
+                        • NLB: ₹1,600<br>
+                        • NAT Gateway: ₹4,000<br>
+                        • Data Processing: ₹1,200
+                    </div>
+                    <div class="price-amount">₹6,800</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="arrow-container">
+            <div class="arrow"></div>
+        </div>
+
+        <!-- Layer 4: EKS Cluster #1 -->
+        <div class="layer" data-layer="4" onclick="showDetails('eks1')">
+            <div class="layer-card layer-eks1">
+                <div class="layer-title">4️⃣ AWS EKS Cluster #1 - Ingestion & Streaming</div>
+
+                <div class="components-box">
+                    <div class="components-title">Core Components</div>
+                    <div class="component-item">• EMQX MQTT Broker (HA) • Apache Kafka (Event Streaming) • Apache Flink
+                        (Stream Processing)</div>
+                    <div class="component-item">• Real-time IoT Data Ingestion • Message Routing • Protocol Translation
+                        • Data Validation</div>
+                </div>
+
+                <div class="price-badge">
+                    <div class="price-label">💰 Monthly Cost</div>
+                    <div class="price-breakdown">
+                        • t3.large × 2: ₹9,200<br>
+                        • EBS 200GB gp3: ₹1,600<br>
+                        • EKS Control Plane: ₹5,400
+                    </div>
+                    <div class="price-amount">₹16,200</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="arrow-container">
+            <div class="arrow"></div>
+        </div>
+
+        <!-- Layer 5: EKS Cluster #2 -->
+        <div class="layer" data-layer="5" onclick="showDetails('eks2')">
+            <div class="layer-card layer-eks2">
+                <div class="layer-title">5️⃣ AWS EKS Cluster #2 - Business Microservices</div>
+
+                <div class="components-box">
+                    <div class="components-title">Microservices</div>
+                    <div class="component-item">• Battery Management Service • Station Management Service • User
+                        Management Service</div>
+                    <div class="component-item">• Payment & Billing Service • Notification Service • Analytics Service
+                    </div>
+                    <div class="component-item">• REST APIs (FastAPI) • GraphQL Gateway • WebSocket (Real-time) •
+                        Elastic Load Balancer (ALB)</div>
+                </div>
+
+                <div class="price-badge">
+                    <div class="price-label">💰 Monthly Cost</div>
+                    <div class="price-breakdown">
+                        • t3.large × 2: ₹9,200<br>
+                        • EBS 150GB gp3: ₹1,200<br>
+                        • EKS Control Plane: ₹5,400<br>
+                        • ALB: ₹1,500
+                    </div>
+                    <div class="price-amount">₹17,300</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="arrow-container">
+            <div class="arrow"></div>
+        </div>
+
+        <!-- Layer 6: EKS Cluster #3 - AI/ML -->
+        <div class="layer" data-layer="6" onclick="showDetails('eks3')">
+            <div class="layer-card layer-eks3">
+                <div class="layer-title">6️⃣ AWS EKS Cluster #3 - AI/ML & Intelligence</div>
+
+                <div class="ai-agents-grid">
+                    <div class="ai-agent-card" onclick="event.stopPropagation(); showDetails('batteryAgent')">
+                        <div class="ai-agent-title">🧠 Battery Intelligence Agent</div>
+                        <div class="ai-agent-detail">LSTM-based Predictive Maintenance</div>
+                        <div class="ai-agent-detail">SoH/SoC Estimation (92% accuracy)</div>
+                        <div class="ai-agent-detail">Battery Degradation Forecasting</div>
+                    </div>
+
+                    <div class="ai-agent-card" onclick="event.stopPropagation(); showDetails('bessAgent')">
+                        <div class="ai-agent-title">⚡ BESS Management Agent</div>
+                        <div class="ai-agent-detail">Reinforcement Learning Optimization</div>
+                        <div class="ai-agent-detail">Time-of-Use Tariff Management</div>
+                        <div class="ai-agent-detail">Demand Response & V2G Export</div>
+                    </div>
+
+                    <div class="ai-agent-card" onclick="event.stopPropagation(); showDetails('gridAgent')">
+                        <div class="ai-agent-title">🔌 Grid Integration Agent</div>
+                        <div class="ai-agent-detail">Real-time Grid Pricing</div>
+                        <div class="ai-agent-detail">Power Quality Monitoring</div>
+                        <div class="ai-agent-detail">Harmonics Detection (IEEE 519)</div>
+                    </div>
+
+                    <div class="ai-agent-card" onclick="event.stopPropagation(); showDetails('solarAgent')">
+                        <div class="ai-agent-title">☀️ Solar Optimization Agent</div>
+                        <div class="ai-agent-detail">Random Forest Solar Forecasting</div>
+                        <div class="ai-agent-detail">MPPT Efficiency (98%)</div>
+                        <div class="ai-agent-detail">Hybrid Energy Dispatch</div>
+                    </div>
+
+                    <div class="ai-agent-card" onclick="event.stopPropagation(); showDetails('customerAgent')">
+                        <div class="ai-agent-title">👤 Customer Experience Agent</div>
+                        <div class="ai-agent-detail">NLP-based Chatbot (92% CSAT)</div>
+                        <div class="ai-agent-detail">Personalized Recommendations</div>
+                        <div class="ai-agent-detail">Multi-language Support</div>
+                    </div>
+
+                    <div class="ai-agent-card" onclick="event.stopPropagation(); showDetails('safetyAgent')">
+                        <div class="ai-agent-title">🛡️ Safety & Security Agent</div>
+                        <div class="ai-agent-detail">CNN-based Fire Detection</div>
+                        <div class="ai-agent-detail">Fraud Detection (95% accuracy)</div>
+                        <div class="ai-agent-detail">Thermal Runaway Prevention</div>
+                    </div>
+                </div>
+
+                <div class="price-badge">
+                    <div class="price-label">💰 Monthly Cost</div>
+                    <div class="price-breakdown">
+                        • t3.large × 2: ₹9,200<br>
+                        • EBS 200GB gp3: ₹1,600<br>
+                        • EKS Control Plane: ₹5,400
+                    </div>
+                    <div class="price-amount">₹16,200</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="arrow-container">
+            <div class="arrow"></div>
+        </div>
+
+        <!-- Layer 7: Data & Storage -->
+        <div class="layer" data-layer="7" onclick="showDetails('dataStorage')">
+            <div class="layer-card layer-data">
+                <div class="layer-title">7️⃣ Data & Storage Layer</div>
+
+                <div class="components-box">
+                    <div class="components-title">Data & Storage Components</div>
+                    <div class="component-item">• Neon Postgres (Serverless) • Redis Cluster • TimescaleDB (Time-series)
+                        • S3</div>
+                    <div class="component-item">• EBS Volumes (Shared) • Snapshots / Backups</div>
+                </div>
+
+                <div class="price-badge">
+                    <div class="price-label">💰 Monthly Cost</div>
+                    <div class="price-breakdown">
+                        Neon (₹4,500) • Redis (₹2,500)<br>
+                        TimescaleDB (₹3,500) • S3 (₹4,000)<br>
+                        EBS (₹2,000) • Snapshots (₹1,000)
+                    </div>
+                    <div class="price-amount">₹17,500</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="arrow-container">
+            <div class="arrow"></div>
+        </div>
+
+        <!-- Layer 8: Monitoring & Operations -->
+        <div class="layer" data-layer="8" onclick="showDetails('monitoring')">
+            <div class="layer-card layer-monitoring">
+                <div class="layer-title">8️⃣ Monitoring, Alerting & Operations</div>
+
+                <div class="components-box">
+                    <div class="components-title">Monitoring Components</div>
+                    <div class="component-item">• Prometheus (Metrics) • Grafana (Dashboards) • Real-time Alerts •
+                        Performance Monitoring • Resource Tracking</div>
+                </div>
+
+                <div class="price-badge">
+                    <div class="price-label">💰 Monthly Cost</div>
+                    <div class="price-breakdown">
+                        t3.large × 2 (₹9,200) • EBS (₹800)<br>
+                        Internal LB (₹400) • Snapshots (₹300)
+                    </div>
+                    <div class="price-amount">₹10,700</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="arrow-container">
+            <div class="arrow"></div>
+        </div>
+
+        <!-- Layer 9: Client Applications -->
+        <div class="layer" data-layer="9" onclick="showDetails('clientApps')">
+            <div class="layer-card layer-clients">
+                <div class="layer-title">9️⃣ Client Applications & Interfaces</div>
+
+                <div class="client-apps-grid">
+                    <div class="client-app-card">
+                        <div class="client-app-title">Mobile App</div>
+                        <div class="client-app-detail">iOS & Android</div>
+                        <div class="client-app-detail">Real-time Status</div>
+                    </div>
+
+                    <div class="client-app-card">
+                        <div class="client-app-title">Station Portal</div>
+                        <div class="client-app-detail">HMI Touch Screen</div>
+                        <div class="client-app-detail">Swap Management</div>
+                    </div>
+
+                    <div class="client-app-card">
+                        <div class="client-app-title">Admin Portal</div>
+                        <div class="client-app-detail">Operations Mgmt</div>
+                        <div class="client-app-detail">Fleet Monitoring</div>
+                    </div>
+
+                    <div class="client-app-card">
+                        <div class="client-app-title">Dealer Portal</div>
+                        <div class="client-app-detail">Partner Mgmt</div>
+                        <div class="client-app-detail">Inventory</div>
+                    </div>
+
+                    <div class="client-app-card">
+                        <div class="client-app-title">Dashboard</div>
+                        <div class="client-app-detail">Analytics</div>
+                        <div class="client-app-detail">Real-time Reports</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cost Summary Section -->
+        <div class="cost-summary layer" data-layer="10">
+            <div class="cost-summary-title">💰 INFRASTRUCTURE COST SUMMARY</div>
+
+            <div class="cost-grid">
+                <div class="cost-table">
+                    <div class="cost-row">
+                        <div class="cost-row-label">Route 53</div>
+                        <div class="cost-row-value">₹250</div>
+                    </div>
+                    <div class="cost-row">
+                        <div class="cost-row-label">Networking (NLB + NAT + VPC)</div>
+                        <div class="cost-row-value">₹6,800</div>
+                    </div>
+                    <div class="cost-row">
+                        <div class="cost-row-label">EKS Cluster #1 (Ingestion)</div>
+                        <div class="cost-row-value">₹16,200</div>
+                    </div>
+                    <div class="cost-row">
+                        <div class="cost-row-label">EKS Cluster #2 (Business)</div>
+                        <div class="cost-row-value">₹17,300</div>
+                    </div>
+                    <div class="cost-row">
+                        <div class="cost-row-label">EKS Cluster #3 (AI/ML)</div>
+                        <div class="cost-row-value">₹16,200</div>
+                    </div>
+                    <div class="cost-row">
+                        <div class="cost-row-label">Data & Storage Layer</div>
+                        <div class="cost-row-value">₹17,500</div>
+                    </div>
+                    <div class="cost-row">
+                        <div class="cost-row-label">Monitoring & Operations</div>
+                        <div class="cost-row-value">₹10,700</div>
+                    </div>
+                    <div class="cost-row cost-total">
+                        <div class="cost-row-label">TOTAL AWS COST / MONTH</div>
+                        <div class="cost-row-value">₹84,950</div>
+                    </div>
+                </div>
+
+                <div class="per-vehicle-box">
+                    <div class="per-vehicle-title">📊 PER VEHICLE COST</div>
+                    <div class="per-vehicle-vehicles">Total Vehicles: 3,000</div>
+
+                    <div class="per-vehicle-calc">
+                        <strong>Calculation:</strong><br>
+                        ₹84,950 ÷ 3,000 vehicles
+                    </div>
+
+                    <div class="per-vehicle-result">
+                        <div class="per-vehicle-result-label">Cost per Vehicle per Month</div>
+                        <div class="per-vehicle-result-amount">₹28.32</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Architecture Highlights -->
+        <div class="highlights-section layer" data-layer="11">
+            <div class="highlights-title">📋 ARCHITECTURE HIGHLIGHTS</div>
+
+            <div class="highlights-grid">
+                <div class="highlight-card">
+                    <div class="highlight-card-title">🎯 AI-First Architecture</div>
+                    <ul>
+                        <li>• 6 Specialized AI Agents for autonomous operations</li>
+                        <li>• Battery Intelligence (LSTM), BESS Management (RL), Grid Integration</li>
+                        <li>• Solar Optimization, Customer Experience (NLP), Safety & Security (CNN)</li>
+                        <li>• 38% cost savings, 92% customer satisfaction, 85% fewer battery failures</li>
+                        <li>• Predictive Maintenance with 92% accuracy, 3.2 min avg swap time</li>
+                        <li>• Multi-Agent Orchestration via MQTT Message Bus</li>
+                    </ul>
+                </div>
+
+                <div class="highlight-card">
+                    <div class="highlight-card-title">🔐 Security & Compliance</div>
+                    <ul>
+                        <li>• End-to-End Encryption (mTLS, TLS 1.3, X.509 Certificates)</li>
+                        <li>• Multi-layer Safety Systems (Fire Detection, Thermal Runaway Prevention)</li>
+                        <li>• Fraud Detection (95% accuracy), OWASP API Security</li>
+                        <li>• OAuth 2.0 / JWT Authentication, Rate Limiting & Throttling</li>
+                        <li>• DNSSEC, WAF, Security Alerts, Compliance Logging</li>
+                        <li>• Electrical Safety Monitoring, Tampering Detection</li>
+                    </ul>
+                </div>
+
+                <div class="highlight-card">
+                    <div class="highlight-card-title">⚡ High Performance & Scalability</div>
+                    <ul>
+                        <li>• Real-time Stream Processing (Apache Kafka + Flink)</li>
+                        <li>• Serverless PostgreSQL (Neon DB) with Auto-scaling</li>
+                        <li>• Multi-AZ Deployment, Health Checks, Load Balancing</li>
+                        <li>• Redis Cluster for sub-millisecond cache access</li>
+                        <li>• 3.2 min avg swap time (20% faster), 99.9% uptime SLA</li>
+                    </ul>
+                </div>
+
+                <div class="highlight-card">
+                    <div class="highlight-card-title">🌱 Energy Optimization</div>
+                    <ul>
+                        <li>• 50 kW Solar PV Integration (98% MPPT efficiency)</li>
+                        <li>• BESS Optimization (ToU Tariff, Demand Response, V2G Export)</li>
+                        <li>• Grid Integration (Power Quality, Real-time Pricing)</li>
+                        <li>• Solar Forecasting (Random Forest), Hybrid Energy Dispatch</li>
+                        <li>• 38% reduction in electricity costs (₹1,240/day savings)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer-note">
+            <p class="bold">Infrastructure Optimized for Multi-Station Deployment | Scalable Multi-Cluster Architecture
+            </p>
+            <p>Enterprise-Ready | Kubernetes-Native | Cloud-Native | AI-Powered Platform</p>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal" id="detailModal">
+        <div class="modal-content">
+            <div class="modal-close" onclick="closeModal()">×</div>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <script>
+        // Generate animated background particles
+        function createParticles() {
+            const bgAnimation = document.getElementById('bgAnimation');
+            for (let i = 0; i < 30; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.width = Math.random() * 4 + 2 + 'px';
+                particle.style.height = particle.style.width;
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.top = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 20 + 's';
+                particle.style.animationDuration = (Math.random() * 10 + 15) + 's';
+                bgAnimation.appendChild(particle);
+            }
+        }
+
+        // Advanced Scroll Reveal using Intersection Observer
+        const observerOptions = {
+            root: null,
+            rootMargin: '0px',
+            threshold: 0.15
+        };
+
+        const observer = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    // Optional: Stop observing once visible if you want it to happen only once
+                    // observer.unobserve(entry.target);
+                } else {
+                    // Optional: Remove class to re-animate when scrolling back up
+                    entry.target.classList.remove('visible');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.layer, .cost-summary, .highlights-section').forEach(el => {
+            observer.observe(el);
+        });
+
+        // Initialize particles with slower, premium movement
+        createParticles();
+
+        // Modal data
+        const detailsData = {
+            iot: {
+                title: '1️⃣ IoT & Edge Layer',
+                description: 'Physical infrastructure and edge computing at battery swapping stations with local control and real-time monitoring.',
+                components: [
+                    'Battery Swapping Stations with automated mechanisms',
+                    'Smart Chargers with BMS integration',
+                    'Battery Management Systems (BMS) for health monitoring',
+                    'Temperature, Voltage, Current, SOC Sensors',
+                    'Edge Controllers for local processing and control',
+                    'Security cameras and access control systems',
+                    'Fire detection and thermal management systems'
+                ],
+                technologies: ['MQTT', 'TLS 1.2/1.3', 'X.509 Certificates', 'Edge Computing', 'Modbus', 'mTLS'],
+                features: [
+                    '🔐 End-to-End encryption with mTLS and X.509 certificates',
+                    '📡 Real-time data transmission every 5 seconds',
+                    '⚡ Local edge processing and autonomous control',
+                    '🔋 Battery health monitoring and SoC tracking',
+                    '🌡️ Thermal management and safety systems',
+                    '📊 Edge analytics with sub-millisecond latency',
+                    '🔒 Device authentication and provisioning',
+                    '🚨 Fire detection and thermal runaway prevention',
+                    '💾 Local data buffering for network resilience'
+                ],
+                security: 'MQTT over TLS 1.2/1.3 (Port 8883) • mTLS with X.509 Certificates • Device authentication • Encrypted data transmission'
+            },
+            route53: {
+                title: '2️⃣ AWS Route 53',
+                cost: '₹250/month',
+                description: 'Highly available and scalable DNS service for reliable domain name resolution with advanced traffic routing.',
+                components: [
+                    'DNS Resolution with ultra-low latency',
+                    'DNSSEC for enhanced security',
+                    'Health Checks and automatic failover',
+                    'Traffic routing policies (geolocation, latency, weighted)',
+                    'Domain registration and management'
+                ],
+                technologies: ['DNS', 'DNSSEC', 'Health Checks', 'Geo-routing', 'Latency-based routing'],
+                features: [
+                    '🌐 Global DNS resolution with <100ms latency',
+                    '🔐 DNSSEC for DNS query security',
+                    '💓 Active health checks for all endpoints',
+                    '🔄 Automatic failover to healthy endpoints',
+                    '📍 Geolocation-based traffic routing',
+                    '⚡ 100% uptime SLA guarantee',
+                    '🌍 Multi-region support with anycast routing',
+                    '📊 DNS query logging and analytics'
+                ]
+            },
+            networking: {
+                title: '3️⃣ Networking Layer',
+                cost: '₹6,800/month',
+                description: 'High-performance network infrastructure ensuring secure, reliable connectivity with enterprise-grade load balancing.',
+                components: [
+                    'Network Load Balancer (NLB) for TCP/UDP traffic',
+                    'NAT Gateway for secure outbound internet access',
+                    'VPC (Virtual Private Cloud) with multiple subnets',
+                    'Security Groups and Network ACLs',
+                    'VPC Peering and Transit Gateway',
+                    'Data Transfer and Processing optimization'
+                ],
+                technologies: ['NLB', 'NAT Gateway', 'VPC', 'Security Groups', 'NACLs', 'Route Tables'],
+                features: [
+                    '⚡ TCP/UDP passthrough preserving client IP addresses',
+                    '🔐 End-to-end TLS encryption maintained',
+                    '🌐 Multi-AZ deployment for 99.99% availability',
+                    '📊 Handles millions of requests per second',
+                    '🔒 Layered security with Security Groups and NACLs',
+                    '💾 NAT Gateway for secure outbound traffic',
+                    '📈 Auto-scaling for traffic spikes',
+                    '🛡️ DDoS protection with AWS Shield'
+                ],
+                breakdown: {
+                    'Network Load Balancer': '₹1,600/month - L4 load balancing',
+                    'NAT Gateway': '₹4,000/month - Outbound connectivity',
+                    'Data Processing': '₹1,200/month - Transfer and processing'
+                }
+            },
+            eks1: {
+                title: '4️⃣ EKS Cluster #1 - Ingestion & Streaming',
+                cost: '₹16,200/month',
+                description: 'Dedicated Kubernetes cluster for real-time IoT data ingestion, event streaming, and stream processing at scale.',
+                components: [
+                    'EMQX MQTT Broker (HA cluster with 3 nodes)',
+                    'Apache Kafka for distributed event streaming',
+                    'Apache Flink for real-time stream processing',
+                    'Protocol translators (MQTT to Kafka bridge)',
+                    'Data validators and enrichment services',
+                    'Message routing and topic management',
+                    'Auto-scaling node groups (t3.large instances)'
+                ],
+                technologies: ['Kubernetes', 'EMQX', 'Kafka', 'Flink', 'Docker', 'Helm', 'MQTT', 'Zookeeper'],
+                features: [
+                    '📡 Processes 10M+ messages per day from IoT devices',
+                    '🔄 Real-time event streaming with Kafka topics',
+                    '⚡ Stream processing with Apache Flink jobs',
+                    '🔀 Protocol translation and intelligent routing',
+                    '✅ Real-time data validation and enrichment',
+                    '📊 Message deduplication and ordering guarantees',
+                    '🔐 TLS 1.3 encryption for all connections',
+                    '🌍 Multi-AZ Kafka cluster for high availability',
+                    '📈 Horizontal scaling based on throughput'
+                ],
+                breakdown: {
+                    't3.large × 2': '₹9,200/month - Worker nodes',
+                    'EBS 200GB gp3': '₹1,600/month - Persistent storage',
+                    'EKS Control Plane': '₹5,400/month - Managed Kubernetes'
+                }
+            },
+            eks2: {
+                title: '5️⃣ EKS Cluster #2 - Business Microservices',
+                cost: '₹17,300/month',
+                description: 'Core business logic cluster running essential microservices for battery management, payments, and customer operations.',
+                components: [
+                    'Battery Management Service (lifecycle tracking)',
+                    'Station Management Service (operations)',
+                    'User Management & Authentication Service',
+                    'Payment & Billing Service (multi-gateway)',
+                    'Notification Service (SMS, Email, Push)',
+                    'Analytics Service (real-time insights)',
+                    'REST APIs (FastAPI framework)',
+                    'GraphQL Gateway for flexible queries',
+                    'WebSocket services for real-time updates',
+                    'Application Load Balancer (ALB)'
+                ],
+                technologies: ['Kubernetes', 'Python', 'FastAPI', 'GraphQL', 'WebSocket', 'Node.js', 'Go'],
+                features: [
+                    '🔐 OAuth 2.0 and JWT-based authentication',
+                    '💳 Multi-gateway payment processing (Stripe, Razorpay)',
+                    '📊 Real-time analytics and business insights',
+                    '🔔 Multi-channel notification system',
+                    '📅 Smart booking system with QR codes',
+                    '⚡ GraphQL API with flexible query patterns',
+                    '🌍 Multi-AZ deployment for fault tolerance',
+                    '🔄 Zero-downtime rolling deployments',
+                    '🛡️ API rate limiting and throttling',
+                    '📈 Auto-scaling based on request volume'
+                ],
+                breakdown: {
+                    't3.large × 2': '₹9,200/month - Worker nodes',
+                    'EBS 150GB gp3': '₹1,200/month - Storage',
+                    'EKS Control Plane': '₹5,400/month - Kubernetes',
+                    'Application Load Balancer': '₹1,500/month - L7 routing'
+                }
+            },
+            eks3: {
+                title: '6️⃣ EKS Cluster #3 - AI/ML & Intelligence',
+                cost: '₹16,200/month',
+                description: 'Specialized cluster running 6 AI agents for autonomous operations, predictive analytics, and intelligent decision-making.',
+                components: [
+                    '🧠 Battery Intelligence Agent (LSTM networks)',
+                    '⚡ BESS Management Agent (Reinforcement Learning)',
+                    '🔌 Grid Integration Agent (power optimization)',
+                    '☀️ Solar Optimization Agent (Random Forest)',
+                    '👤 Customer Experience Agent (NLP)',
+                    '🛡️ Safety & Security Agent (CNN)',
+                    'MLflow for model management',
+                    'TensorFlow Serving for inference',
+                    'Redis for model caching'
+                ],
+                technologies: ['TensorFlow', 'PyTorch', 'LSTM', 'RL', 'CNN', 'NLP', 'Random Forest', 'MLflow'],
+                features: [
+                    '🧠 92% accuracy in battery SoH prediction',
+                    '⚡ 3-day advance predictive maintenance warnings',
+                    '💰 38% reduction in electricity costs (₹1,240/day)',
+                    '☀️ 98% MPPT efficiency for solar integration',
+                    '💬 NLP chatbot with 92% customer satisfaction',
+                    '🔒 95% fraud detection accuracy',
+                    '🔥 Real-time thermal runaway prevention',
+                    '📊 MQTT-based multi-agent orchestration',
+                    '🎯 Continuous learning and model retraining'
+                ],
+                metrics: {
+                    'Daily Cost Savings': '₹1,240 in electricity',
+                    'Customer Satisfaction': '92% CSAT score',
+                    'Battery Failure Reduction': '85% fewer failures',
+                    'Average Swap Time': '3.2 minutes',
+                    'Prediction Accuracy': '92% for maintenance',
+                    'Fraud Detection': '95% accuracy rate'
+                },
+                breakdown: {
+                    't3.large × 2': '₹9,200/month - ML workloads',
+                    'EBS 200GB gp3': '₹1,600/month - Model storage',
+                    'EKS Control Plane': '₹5,400/month - Kubernetes'
+                }
+            },
+            dataStorage: {
+                title: '7️⃣ Data & Storage Layer',
+                cost: '₹17,500/month',
+                description: 'Multi-database architecture optimized for different workloads: transactional, time-series, caching, and analytics.',
+                components: [
+                    'Neon Postgres (Serverless) - Primary transactional database',
+                    'Redis Cluster - High-performance caching and sessions',
+                    'TimescaleDB - IoT time-series data optimization',
+                    'AWS S3 - Object storage and data lake',
+                    'EBS Volumes - Shared persistent storage',
+                    'Automated snapshots and backups'
+                ],
+                technologies: ['PostgreSQL', 'Neon', 'Redis', 'TimescaleDB', 'S3', 'EBS'],
+                features: [
+                    '💾 Serverless PostgreSQL with automatic scaling',
+                    '⚡ Redis cluster with sub-millisecond latency',
+                    '📊 TimescaleDB for efficient time-series queries',
+                    '📦 S3 for durable object storage (99.999999999%)',
+                    '🔄 Automated daily backups with 30-day retention',
+                    '📈 Read replicas for horizontal scaling',
+                    '🔐 Encryption at rest (AES-256) and in transit (TLS)',
+                    '🔍 Full-text search with PostgreSQL',
+                    '💰 Cost-optimized with serverless architecture'
+                ],
+                breakdown: {
+                    'Neon Postgres': '₹4,500/month - Serverless database',
+                    'Redis Cluster': '₹2,500/month - Caching layer',
+                    'TimescaleDB': '₹3,500/month - Time-series data',
+                    'AWS S3': '₹4,000/month - Object storage',
+                    'EBS Volumes': '₹2,000/month - Block storage',
+                    'Snapshots/Backups': '₹1,000/month - Data protection'
+                }
+            },
+            monitoring: {
+                title: '8️⃣ Monitoring, Alerting & Operations',
+                cost: '₹10,700/month',
+                description: 'Comprehensive observability platform for metrics, logs, traces, and real-time alerting across the entire infrastructure.',
+                components: [
+                    'Prometheus - Metrics collection and storage',
+                    'Grafana - Visualization and dashboards',
+                    'AlertManager - Intelligent alerting',
+                    'Loki - Log aggregation',
+                    'Jaeger - Distributed tracing',
+                    'Elasticsearch - Log search and analytics',
+                    'Custom monitoring agents'
+                ],
+                technologies: ['Prometheus', 'Grafana', 'AlertManager', 'Loki', 'Jaeger', 'Elasticsearch'],
+                features: [
+                    '📈 Real-time metrics collection (1000+ metrics)',
+                    '🎨 50+ custom Grafana dashboards',
+                    '🔍 Centralized log aggregation (10M+ logs/day)',
+                    '🚨 Smart alerting with PagerDuty integration',
+                    '🔬 Distributed tracing across all microservices',
+                    '📱 Mobile alerts for on-call engineers',
+                    '⚡ 99.9% monitoring uptime SLA',
+                    '📊 Custom business metrics and KPIs',
+                    '🔔 Multi-channel notifications (Slack, Email, SMS)'
+                ],
+                breakdown: {
+                    't3.large × 2': '₹9,200/month - Monitoring stack',
+                    'EBS Storage': '₹800/month - Metrics storage',
+                    'Internal Load Balancer': '₹400/month - HA',
+                    'Snapshots': '₹300/month - Backup'
+                }
+            },
+            clientApps: {
+                title: '9️⃣ Client Applications & Interfaces',
+                description: 'Multi-platform applications serving different user segments with real-time features and seamless experiences.',
+                components: [
+                    'Mobile App (iOS & Android) - React Native',
+                    'Station Portal - HMI Touch Screen Interface',
+                    'Admin Portal - Operations Management',
+                    'Dealer Portal - Partner & Inventory Management',
+                    'Analytics Dashboard - Real-time Insights',
+                    'Web Portal - Progressive Web App (PWA)'
+                ],
+                technologies: ['React Native', 'React', 'TypeScript', 'PWA', 'WebSocket', 'Next.js'],
+                features: [
+                    '📱 Native mobile apps for iOS and Android',
+                    '🖥️ Responsive web applications (PWA)',
+                    '🔐 Biometric authentication and OAuth 2.0',
+                    '🗺️ Real-time station locator with availability',
+                    '📅 Smart booking and QR code-based swapping',
+                    '💳 Integrated payment processing',
+                    '📊 Real-time usage analytics and reports',
+                    '🔔 Push notifications and alerts',
+                    '💬 In-app chat with AI assistance',
+                    '🌐 Multi-language support'
+                ]
+            },
+            batteryAgent: {
+                title: '🧠 Battery Intelligence Agent',
+                description: 'LSTM-based machine learning system for battery health prediction and lifecycle management.',
+                technologies: ['LSTM', 'TensorFlow', 'Python', 'Time Series Analysis'],
+                features: [
+                    '📊 Real-time SoH (State of Health) estimation',
+                    '🔋 SoC (State of Charge) prediction with 92% accuracy',
+                    '⚠️ Predictive maintenance with 3-day advance warning',
+                    '📉 Battery degradation forecasting',
+                    '🔄 Continuous model retraining with new data',
+                    '📈 Lifecycle cost optimization',
+                    '🎯 Anomaly detection for battery faults'
+                ]
+            },
+            bessAgent: {
+                title: '⚡ BESS Management Agent',
+                description: 'Reinforcement Learning agent for optimal battery energy storage system management.',
+                technologies: ['Reinforcement Learning', 'PyTorch', 'Deep Q-Network'],
+                features: [
+                    '💰 Time-of-Use tariff optimization',
+                    '⚡ Peak demand management',
+                    '🔄 Vehicle-to-Grid (V2G) export coordination',
+                    '📊 Demand response participation',
+                    '🎯 38% reduction in electricity costs',
+                    '⚖️ Load balancing and energy arbitrage'
+                ]
+            },
+            gridAgent: {
+                title: '🔌 Grid Integration Agent',
+                description: 'Real-time grid monitoring and power quality management system.',
+                technologies: ['Real-time Analytics', 'Signal Processing', 'IEEE 519'],
+                features: [
+                    '⚡ Real-time grid pricing integration',
+                    '📊 Power quality monitoring',
+                    '🔍 Harmonics detection (IEEE 519 compliance)',
+                    '⚖️ Voltage and frequency regulation',
+                    '🔄 Reactive power compensation',
+                    '📈 Grid stability analysis'
+                ]
+            },
+            solarAgent: {
+                title: '☀️ Solar Optimization Agent',
+                description: 'Random Forest model for solar generation forecasting and MPPT optimization.',
+                technologies: ['Random Forest', 'Scikit-learn', 'Weather APIs'],
+                features: [
+                    '☀️ Solar generation forecasting',
+                    '⚡ 98% MPPT efficiency',
+                    '🌤️ Weather-based optimization',
+                    '🔋 Hybrid energy dispatch',
+                    '📊 Real-time irradiance monitoring',
+                    '💰 Solar revenue maximization'
+                ]
+            },
+            customerAgent: {
+                title: '👤 Customer Experience Agent',
+                description: 'NLP-powered chatbot and personalization engine for superior customer experience.',
+                technologies: ['NLP', 'BERT', 'Transformers', 'Sentiment Analysis'],
+                features: [
+                    '💬 24/7 AI chatbot with 92% CSAT',
+                    '🎯 Personalized recommendations',
+                    '🌐 Multi-language support',
+                    '📊 Sentiment analysis',
+                    '🔔 Proactive notifications',
+                    '💡 Context-aware responses'
+                ]
+            },
+            safetyAgent: {
+                title: '🛡️ Safety & Security Agent',
+                description: 'CNN-based computer vision and anomaly detection for safety and fraud prevention.',
+                technologies: ['CNN', 'Computer Vision', 'Anomaly Detection'],
+                features: [
+                    '🔥 CNN-based fire detection',
+                    '🚨 Thermal runaway prevention',
+                    '🔒 Fraud detection (95% accuracy)',
+                    '📹 Video analytics',
+                    '⚠️ Real-time safety alerts',
+                    '🛡️ Tamper detection'
+                ]
+            }
+        };
+
+        function showDetails(section) {
+            const modal = document.getElementById('detailModal');
+            const modalBody = document.getElementById('modalBody');
+            const data = detailsData[section];
+
+            if (!data) return;
+
+            let html = `<h2>${data.title}</h2>`;
+
+            if (data.cost) {
+                html += `<div class="cost-badge-modal">💰 ${data.cost}</div>`;
+            }
+
+            html += `<p style="margin-top: 15px; font-size: 16px;">${data.description}</p>`;
+
+            if (data.components) {
+                html += `<h3>🔧 Components</h3><ul>`;
+                data.components.forEach(comp => {
+                    html += `<li>${comp}</li>`;
+                });
+                html += `</ul>`;
+            }
+
+            html += `<h3>⚙️ Technologies</h3><div style="margin-bottom: 15px;">`;
+            data.technologies.forEach(tech => {
+                html += `<span class="badge">${tech}</span>`;
+            });
+            html += `</div>`;
+
+            html += `<h3>✨ Key Features</h3><ul>`;
+            data.features.forEach(feature => {
+                html += `<li>${feature}</li>`;
+            });
+            html += `</ul>`;
+
+            if (data.metrics) {
+                html += `<h3>📊 Performance Metrics</h3>`;
+                html += `<div class="metrics-grid">`;
+                for (const [key, value] of Object.entries(data.metrics)) {
+                    html += `
+                        <div class="metric-item">
+                            <div class="metric-label">${key}</div>
+                            <div class="metric-value">${value}</div>
+                        </div>
+                    `;
+                }
+                html += `</div>`;
+            }
+
+            if (data.breakdown) {
+                html += `<h3>💵 Cost Breakdown</h3><ul>`;
+                for (const [key, value] of Object.entries(data.breakdown)) {
+                    html += `<li><strong>${key}:</strong> ${value}</li>`;
+                }
+                html += `</ul>`;
+            }
+
+            if (data.security) {
+                html += `<h3>🔐 Security</h3><p style="font-size: 15px;">${data.security}</p>`;
+            }
+
+            modalBody.innerHTML = html;
+            modal.classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('detailModal').classList.remove('active');
+        }
+
+        // Event listeners
+        document.getElementById('detailModal').addEventListener('click', function (e) {
+            if (e.target === this) closeModal();
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        window.addEventListener('scroll', revealOnScroll);
+        window.addEventListener('load', () => {
+            createParticles();
+            revealOnScroll();
+        });
+    </script>
+</body>
+
+</html>
